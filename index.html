@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address to GPS Converter</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE2IDJDMTAuNDc3IDIgNiA2LjQ3NyA2IDEyQzYgMTkuMjUgMTYgMzAgMTYgMzBTMjYgMTkuMjUgMjYgMTJDMjYgNi40NzcgMjEuNTIzIDIgMTYgMlpNMTYgMTZDMTMuNzkxIDE2IDEyIDEzLjIwOSAxMiAxMUMxMiA4Ljc5MSAxMy43OTEgNyAxNiA3UzIwIDguNzkxIDIwIDExQzIwIDEzLjIwOSAxOC4yMDkgMTYgMTYgMTZaIiBmaWxsPSIjM0Y3MkFGIi8+Cjwvc3ZnPgo=" id="favicon"">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/carbon-components/css/carbon-components.min.css" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Kanit', 'IBM Plex Sans', sans-serif;
+            background: #F9F7F7;
+            color: #112D4E;
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        /* Main layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            background: #F9F7F7;
+        }
+        .left-panel {
+            background: #F9F7F7;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #DBE2EF;
+        }
+        .right-panel {
+            background: #F9F7F7;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Input section */
+        .input-section {
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
+        }
+        .input-section.hidden {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+            position: absolute;
+        }
+        .input-title {
+            font-size: 2.625rem;
+            font-weight: 400;
+            color: #112D4E;
+            margin-bottom: 1rem;
+            line-height: 1.19;
+        }
+        .input-subtitle {
+            font-size: 1rem;
+            color: #3F72AF;
+            margin-bottom: 2rem;
+            line-height: 1.375;
+        }
+        .large-textarea {
+            width: 100%;
+            max-width: 30rem;
+            height: 18.75rem;
+            padding: 1rem;
+            border: 2px solid #DBE2EF;
+            border-radius: 0;
+            font-size: 0.875rem;
+            font-family: 'Kanit', 'IBM Plex Mono', monospace;
+            resize: none;
+            outline: none;
+            transition: border-color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            background: #ffffff;
+            color: #112D4E;
+        }
+        .large-textarea:focus {
+            border-color: #3F72AF;
+            outline: 2px solid #3F72AF;
+            outline-offset: -2px;
+        }
+
+        /* Results section */
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
+            pointer-events: none;
+            height: calc(100vh - 3rem);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 3rem;
+        }
+        .results-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        
+        .table-container {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            background: #ffffff;
+        }
+        th {
+            background: #DBE2EF;
+            color: #112D4E;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+            border-bottom: 1px solid #3F72AF;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        th:nth-child(2),
+        th:nth-child(3),
+        th:nth-child(4),
+        td:nth-child(2),
+        td:nth-child(3),
+        td:nth-child(4) {
+            width: 140px;
+            min-width: 140px;
+            max-width: 140px;
+        }
+        th.actions-header {
+            color: transparent;
+        }
+        thead {
+            background: #DBE2EF;
+        }
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #DBE2EF;
+            vertical-align: middle;
+        }
+        tbody tr:hover {
+            background-color: #F9F7F7;
+        }
+        .address-cell {
+            font-weight: 400;
+            max-width: 12.5rem;
+            word-wrap: break-word;
+            color: #112D4E;
+            font-size: 0.875rem;
+        }
+        .coordinate-cell {
+            font-family: 'Kanit', 'IBM Plex Mono', monospace;
+            text-align: center;
+            font-weight: 400;
+            color: #3F72AF;
+            font-size: 0.875rem;
+            position: relative;
+        }
+        
+        /* Carbon Design subtle copy icons */
+        .copy-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1rem;
+            height: 1rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            vertical-align: middle;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .copy-icon:hover {
+            opacity: 1;
+            background: #DBE2EF;
+            border-radius: 0.125rem;
+        }
+        .copy-icon:focus {
+            outline: 2px solid #3F72AF;
+            outline-offset: 2px;
+            opacity: 1;
+        }
+        .copy-icon.copied {
+            opacity: 1;
+            background: #DBE2EF;
+            border-radius: 0.125rem;
+        }
+        .copy-icon svg {
+            width: 1rem;
+            height: 1rem;
+            fill: #3F72AF;
+        }
+        .copy-icon:hover svg {
+            fill: #112D4E;
+        }
+        .copy-icon.copied svg {
+            fill: #112D4E;
+        }
+
+        .gps-btn {
+            background: #3F72AF;
+            color: #ffffff;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 400;
+            font-family: 'Kanit', 'IBM Plex Sans', sans-serif;
+            transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+            height: 2rem;
+            min-height: 2rem;
+            margin-right: 1rem;
+        }
+        .gps-btn:hover {
+            background: #112D4E;
+        }
+        .gps-btn:focus {
+            outline: 2px solid #3F72AF;
+            outline-offset: 2px;
+        }
+        .gps-btn.copied {
+            background: #112D4E;
+        }
+        .error {
+            color: #112D4E;
+            font-weight: 400;
+            font-style: italic;
+        }
+        .loading {
+            color: #3F72AF;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+        }
+        .loading::before {
+            content: '';
+            width: 0.75rem;
+            height: 0.75rem;
+            border: 1px solid #DBE2EF;
+            border-top: 1px solid #3F72AF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .spinner {
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #ffffff40;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .status-spinner {
+            width: 0.875rem;
+            height: 0.875rem;
+            border: 1px solid #DBE2EF;
+            border-top: 1px solid #3F72AF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #map {
+            flex: 1;
+            min-height: 25rem;
+        }
+        
+        /* Status bar - always at bottom of right panel only */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            right: 0;
+            height: 3rem;
+            padding: 0.75rem 1rem;
+            background: #e0e0e0;
+            border-top: 1px solid #c6c6c6;
+            border-left: 1px solid #c6c6c6;
+            font-size: 0.75rem;
+            color: #161616;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .status-info {
+            display: flex;
+            gap: 1.5rem;
+        }
+        .status-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .convert-btn {
+            background: #3F72AF;
+            color: #ffffff;
+            padding: 0.875rem 1rem;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 400;
+            font-family: 'Kanit', 'IBM Plex Sans', sans-serif;
+            margin-top: 1.5rem;
+            transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+            height: 3rem;
+            min-height: 3rem;
+            min-width: 12.5rem;
+        }
+        .convert-btn:hover:not(:disabled) {
+            background: #112D4E;
+        }
+        .convert-btn:focus:not(:disabled) {
+            outline: 2px solid #3F72AF;
+            outline-offset: 2px;
+        }
+        .convert-btn:disabled {
+            background: #DBE2EF;
+            color: #3F72AF;
+            cursor: not-allowed;
+        }
+        .stop-btn {
+            background: #da1e28;
+            color: #ffffff;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 400;
+            font-family: 'Kanit', 'IBM Plex Sans', sans-serif;
+            transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+            height: 2rem;
+        }
+        .stop-btn:hover {
+            background: #b81921;
+        }
+        .stop-btn:focus {
+            outline: 2px solid #da1e28;
+            outline-offset: 2px;
+        }
+        .stop-btn:disabled {
+            background: #DBE2EF;
+            color: #3F72AF;
+            cursor: not-allowed;
+        }
+        .restart-btn {
+            background: #da1e28;
+            color: #ffffff;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 400;
+            font-family: 'Kanit', 'IBM Plex Sans', sans-serif;
+            transition: all 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.32px;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .restart-btn:hover {
+            background: #b81921;
+        }
+        .restart-btn:focus {
+            outline: 2px solid #da1e28;
+            outline-offset: 2px;
+        }
+        .restart-btn svg {
+            width: 0.875rem;
+            height: 0.875rem;
+            fill: #ffffff;
+        }
+
+        @media (max-width: 672px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            .input-section {
+                padding: 2rem 1.5rem;
+            }
+            .large-textarea {
+                height: 12.5rem;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="left-panel">
+            <div id="map"></div>
+        </div>
+        
+        <div class="right-panel">
+            <!-- Input section -->
+            <div class="input-section" id="inputSection">
+                <p class="input-subtitle">Enter addresses, one per line...</p>
+                <textarea 
+                    class="large-textarea" 
+                    id="addresses" 
+                    placeholder="1600 Pennsylvania Avenue NW, Washington, DC&#10;10 Downing Street, London, UK&#10;Champs-Élysées, Paris, France&#10;&#10;Enter each address on a new line..."
+                ></textarea>
+                <button class="convert-btn" id="convertBtn" onclick="startConversion()">
+                    <span id="btnText">Convert to GPS</span>
+                </button>
+            </div>
+
+            <!-- Results section -->
+            <div class="results-section" id="resultsSection">
+                <div class="table-container" id="tableContainer">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Address</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th class="actions-header">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar">
+        <span id="mapStatus">Waiting for input...</span>
+        <div class="status-right">
+            <div class="status-info" id="statusInfo" style="display: none;">
+                <span id="processedCount">Processed: 0</span>
+                <span id="totalCount">Total: 0</span>
+            </div>
+            <div class="status-text">
+                <span id="statusSpinner"></span>
+                <span id="statusText" style="display: none;">Ready</span>
+                <button class="stop-btn" id="stopBtn" onclick="stopConversion()" style="display: none;">Stop conversion</button>
+                <button class="restart-btn" id="restartBtn" onclick="restartApplication()" style="display: none;">
+                    <svg viewBox="0 0 32 32">
+                        <path d="M18 28A12 12 0 1 0 6 16v6.2l-3.6-3.6L1 20l6 6 6-6-1.4-1.4L8 22.2V16a10 10 0 1 1 10 10Z"/>
+                    </svg>
+                    Restart
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let isConverting = false;
+        let shouldStop = false;
+        let map;
+        let markers = [];
+        let processedAddresses = [];
+        
+        // Initialize map with light theme focused on Europe
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: false,
+                touchZoom: false,
+                doubleClickZoom: false,
+                scrollWheelZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                tap: false,
+                zoomSnap: 0,
+                zoomDelta: 1,
+                trackResize: true
+            }).setView([54.5260, 15.2551], 4); // Center of Europe
+            
+            // Light theme tile layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors, © CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+        }
+        
+        function addMarkerToMap(lat, lng, address) {
+            const marker = L.marker([lat, lng]).addTo(map);
+            
+            // Create popup content matching table structure
+            const popupContent = `
+                <div style="font-family: 'Kanit', 'IBM Plex Sans', sans-serif; font-size: 0.875rem;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong>Address:</strong><br/>
+                        <span style="color: #161616;">${address}</span>
+                    </div>
+                    <div style="margin-bottom: 0.25rem;">
+                        <strong>Latitude:</strong> 
+                        <span style="font-family: 'Kanit', 'IBM Plex Mono', monospace; color: #0f62fe;">${lat}</span>
+                        <button onclick="copyToClipboard('${lat}', this)" style="background: transparent; border: none; cursor: pointer; opacity: 0.7; margin-left: 0.25rem;" title="Copy latitude">
+                            <svg width="12" height="12" viewBox="0 0 32 32" fill="#525252">
+                                <path d="M28,10V28H10V10H28m0-2H10a2,2,0,0,0-2,2V28a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V10a2,2,0,0,0-2-2Z"/>
+                                <path d="M4,18H2V4A2,2,0,0,1,4,2H18V4H4Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong>Longitude:</strong> 
+                        <span style="font-family: 'Kanit', 'IBM Plex Mono', monospace; color: #0f62fe;">${lng}</span>
+                        <button onclick="copyToClipboard('${lng}', this)" style="background: transparent; border: none; cursor: pointer; opacity: 0.7; margin-left: 0.25rem;" title="Copy longitude">
+                            <svg width="12" height="12" viewBox="0 0 32 32" fill="#525252">
+                                <path d="M28,10V28H10V10H28m0-2H10a2,2,0,0,0-2,2V28a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V10a2,2,0,0,0-2-2Z"/>
+                                <path d="M4,18H2V4A2,2,0,0,1,4,2H18V4H4Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <button onclick="copyToClipboard('${lat}, ${lng}', this)" style="background: #0f62fe; color: white; border: none; padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.75rem; text-transform: uppercase; font-family: 'Kanit', sans-serif;">
+                        Copy GPS
+                    </button>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+            
+            if (markers.length === 1) {
+                map.setView([lat, lng], 12);
+            } else {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+            
+            updateMapStatus();
+        }
+        
+        function updateMapStatus() {
+            // Only used for initial state - conversion process uses updateStatus instead
+        }
+        
+        function clearMap() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            updateMapStatus();
+        }
+        
+        function updateStatus(processed, total, status, showSpinner = false, showStop = false, showSuccess = false, showRestart = false) {
+            const mapStatus = document.getElementById('mapStatus');
+            const statusInfo = document.getElementById('statusInfo');
+            const statusText = document.getElementById('statusText');
+            const stopBtn = document.getElementById('stopBtn');
+            const restartBtn = document.getElementById('restartBtn');
+            const spinner = document.getElementById('statusSpinner');
+            
+            // Update left side status
+            if (processed > 0 || total > 0) {
+                if (showStop && showSpinner) {
+                    // While converting
+                    let leftStatus = `Converting ${processed}/${total}...`;
+                    mapStatus.innerHTML = `<div class="status-spinner" style="display: inline-block; margin-right: 0.5rem;"></div>${leftStatus}`;
+                } else if (showSuccess) {
+                    // Successfully finished
+                    let leftStatus = `Converted ${processed}/${total}`;
+                    mapStatus.innerHTML = `<span style="color: #198038; margin-right: 0.5rem;">✓</span>${leftStatus}`;
+                } else {
+                    // Other states (stopped, etc.)
+                    let leftStatus = `Converted ${processed}/${total}`;
+                    mapStatus.textContent = leftStatus;
+                }
+            }
+            
+            // Hide all other status elements during conversion
+            statusInfo.style.display = 'none';
+            statusText.style.display = 'none';
+            spinner.innerHTML = '';
+            
+            stopBtn.style.display = showStop ? 'block' : 'none';
+            restartBtn.style.display = showRestart ? 'block' : 'none';
+        }
+        
+        function startConversion() {
+            const textarea = document.getElementById('addresses');
+            const addresses = textarea.value.split('\n').filter(addr => addr.trim() !== '').map(addr => addr.trim());
+            
+            if (addresses.length === 0) {
+                alert('Please enter at least one address');
+                return;
+            }
+            
+            // Show loading state on button
+            const convertBtn = document.getElementById('convertBtn');
+            convertBtn.innerHTML = '<div class="spinner"></div><span id="btnText">Starting...</span>';
+            convertBtn.disabled = true;
+            
+            // Transition to results view
+            setTimeout(() => {
+                document.getElementById('inputSection').classList.add('hidden');
+                document.getElementById('resultsSection').classList.add('visible');
+                
+                // Start conversion after transition
+                setTimeout(() => {
+                    convertAddresses(addresses);
+                }, 150);
+            }, 150);
+        }
+
+        function stopConversion() {
+            shouldStop = true;
+            updateStatus(processedAddresses.length, processedAddresses.length, 'Stopping...', false, false, false, true);
+        }
+        
+        function restartApplication() {
+            // Reset all state
+            isConverting = false;
+            shouldStop = false;
+            processedAddresses = [];
+            
+            // Clear map
+            clearMap();
+            
+            // Clear table
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            // Clear textarea
+            document.getElementById('addresses').value = '';
+            
+            // Reset UI to initial state
+            document.getElementById('inputSection').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.remove('visible');
+            
+            // Reset footer to initial state
+            document.getElementById('mapStatus').textContent = 'Waiting for input...';
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('restartBtn').style.display = 'none';
+            
+            
+            // Reset convert button
+            const convertBtn = document.getElementById('convertBtn');
+            convertBtn.innerHTML = '<span id="btnText">Convert to GPS</span>';
+            convertBtn.disabled = false;
+        }
+        
+
+        async function convertAddresses(addresses) {
+            isConverting = true;
+            shouldStop = false;
+            processedAddresses = [];
+            clearMap();
+            
+            
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            // Create all rows at the beginning - show all addresses from user input
+            addresses.forEach((address, index) => {
+                const row = document.createElement('tr');
+                row.id = `row-${index}`;
+                if (index === 0) {
+                    // First row - currently converting
+                    row.innerHTML = `
+                        <td class="address-cell">${address}</td>
+                        <td class="coordinate-cell" colspan="3" style="text-align: left;"><span class="loading">Converting...</span></td>
+                    `;
+                } else {
+                    // Queue rows - grey with waiting message
+                    row.innerHTML = `
+                        <td class="address-cell" style="color: #8d8d8d;">${address}</td>
+                        <td class="coordinate-cell" colspan="3" style="text-align: left; color: #8d8d8d; font-style: italic;">Waiting in queue...</td>
+                    `;
+                    row.style.backgroundColor = '#f8f9fa';
+                }
+                tableBody.appendChild(row);
+            });
+            
+            updateStatus(0, addresses.length, 'Converting...', true, true, false);
+            
+            for (let i = 0; i < addresses.length; i++) {
+                if (shouldStop) break;
+                
+                const address = addresses[i];
+                const row = document.getElementById(`row-${i}`);
+                
+                // Update current row to converting state if not first
+                if (i > 0) {
+                    row.innerHTML = `
+                        <td class="address-cell">${address}</td>
+                        <td class="coordinate-cell" colspan="3" style="text-align: left;"><span class="loading">Converting...</span></td>
+                    `;
+                    row.style.backgroundColor = '';
+                }
+                
+                try {
+                    if (shouldStop) break;
+                    
+                    const coords = await geocodeAddress(address);
+                    
+                    if (shouldStop) break;
+                    
+                    if (coords) {
+                        const { lat, lng } = coords;
+                        row.innerHTML = `
+                            <td class="address-cell">${address}</td>
+                            <td class="coordinate-cell">
+                                ${lat}
+                                <button class="copy-icon" onclick="copyToClipboard('${lat}', this)" title="Copy latitude" tabindex="0">
+                                    <svg viewBox="0 0 32 32">
+                                        <path d="M28,10V28H10V10H28m0-2H10a2,2,0,0,0-2,2V28a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V10a2,2,0,0,0-2-2Z"/>
+                                        <path d="M4,18H2V4A2,2,0,0,1,4,2H18V4H4Z"/>
+                                    </svg>
+                                </button>
+                            </td>
+                            <td class="coordinate-cell">
+                                ${lng}
+                                <button class="copy-icon" onclick="copyToClipboard('${lng}', this)" title="Copy longitude" tabindex="0">
+                                    <svg viewBox="0 0 32 32">
+                                        <path d="M28,10V28H10V10H28m0-2H10a2,2,0,0,0-2,2V28a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V10a2,2,0,0,0-2-2Z"/>
+                                        <path d="M4,18H2V4A2,2,0,0,1,4,2H18V4H4Z"/>
+                                    </svg>
+                                </button>
+                            </td>
+                            <td class="coordinate-cell">
+                                <button class="gps-btn" onclick="copyToClipboard('${lat}, ${lng}', this)">Copy GPS</button>
+                            </td>
+                        `;
+                        
+                        setTimeout(() => {
+                            addMarkerToMap(parseFloat(lat), parseFloat(lng), address);
+                        }, 100);
+                        
+                        processedAddresses.push({ address, lat, lng });
+                    } else {
+                        row.innerHTML = `
+                            <td class="address-cell">${address}</td>
+                            <td class="coordinate-cell"><span class="error">Not found</span></td>
+                            <td class="coordinate-cell"><span class="error">Not found</span></td>
+                            <td class="coordinate-cell"><span class="error">Unable to geocode</span></td>
+                        `;
+                    }
+                } catch (error) {
+                    if (shouldStop) break;
+                    
+                    row.innerHTML = `
+                        <td class="address-cell">${address}</td>
+                        <td class="coordinate-cell"><span class="error">Error</span></td>
+                        <td class="coordinate-cell"><span class="error">Error</span></td>
+                        <td class="coordinate-cell"><span class="error">${error.message}</span></td>
+                    `;
+                }
+                
+                updateStatus(i + 1, addresses.length, shouldStop ? 'Stopped' : 'Converting...', true, !shouldStop, false);
+                
+                if (i < addresses.length - 1 && !shouldStop) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+            
+            isConverting = false;
+            const finalStatus = shouldStop ? 'Stopped' : 'Complete';
+            const showSuccess = !shouldStop && processedAddresses.length > 0;
+            updateStatus(processedAddresses.length, addresses.length, finalStatus, false, false, showSuccess, true);
+            
+            
+            // Reset convert button
+            const convertBtn = document.getElementById('convertBtn');
+            convertBtn.innerHTML = '<span id="btnText">Convert to GPS</span>';
+            convertBtn.disabled = false;
+        }
+        
+        async function geocodeAddress(address) {
+            const encodedAddress = encodeURIComponent(address);
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat).toFixed(6),
+                        lng: parseFloat(data[0].lon).toFixed(6)
+                    };
+                }
+                return null;
+            } catch (error) {
+                throw new Error('Failed to geocode address');
+            }
+        }
+        
+        function copyToClipboard(text, element) {
+            navigator.clipboard.writeText(text).then(() => {
+                const isIcon = element.classList.contains('copy-icon');
+                const isGpsBtn = element.classList.contains('gps-btn');
+                
+                if (isIcon) {
+                    element.classList.add('copied');
+                    setTimeout(() => {
+                        element.classList.remove('copied');
+                    }, 2000);
+                } else if (isGpsBtn) {
+                    const originalText = element.textContent;
+                    element.textContent = 'Copied!';
+                    element.classList.add('copied');
+                    
+                    setTimeout(() => {
+                        element.textContent = originalText;
+                        element.classList.remove('copied');
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+        
+        // Initialize map when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+        });
+    </script>
+</body>
+</html>

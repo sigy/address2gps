@@ -2,6 +2,8 @@
 
 A simple, one-page web application for converting street addresses to GPS coordinates with real-time visualization.
 
+**🌐 Live Demo:** [https://github.com/sigy/address2gps](https://github.com/sigy/address2gps)
+
 ## Features
 
 - **Batch Conversion**: Convert multiple addresses at once by entering them line by line

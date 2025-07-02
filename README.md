@@ -2,7 +2,7 @@
 
 A simple, one-page web application for converting street addresses to GPS coordinates with real-time visualization.
 
-**🌐 Live Demo:** [https://github.com/sigy/address2gps](https://github.com/sigy/address2gps)
+**🌐 Live Demo:** [https://sigy.github.io/address2gps/](https://sigy.github.io/address2gps/)
 
 ## Features
 
@@ -10,16 +10,12 @@ A simple, one-page web application for converting street addresses to GPS coordi
 - **Interactive Map**: Real-time map visualization with markers for each converted location
 - **Copy Functionality**: One-click copy for individual coordinates or complete GPS pairs
 - **Queue Visualization**: See conversion progress with visual queue states
-- **Responsive Design**: Clean, modern interface following Carbon Design System principles
 
 ## Tech Stack
 
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Mapping**: Leaflet.js with light CartoDB tiles
+- **Mapping**: Leaflet.js with CartoDB tiles
 - **Geocoding**: OpenStreetMap Nominatim API
-- **Design**: Carbon Design System components and principles
-- **Typography**: Kanit font family
-- **Color Scheme**: Custom palette (#F9F7F7, #DBE2EF, #3F72AF, #112D4E)
 
 ## Usage
 
